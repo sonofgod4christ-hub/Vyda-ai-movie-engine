@@ -2,32 +2,30 @@
 VYDA AI MOVIE ENGINE
 Complete Scene Package — Build 034
 
-The authoritative handoff package for one scene.
+Compatibility repair.
 
-This package combines:
+The Complete Scene Package must use the same
+identity systems that belong to the Scene Director.
 
-- Scene direction
-- Location
-- Characters
-- Character identity
-- Appearance
-- Wardrobe
-- Language
-- Accent
-- Voice
-- Dialogue
-- Speaker identity
-- Emotion
-- Continuity
-- Character references
-- Production QC
+Production flow:
 
-Nothing should be sent to a generation worker
-until this package is READY.
-
-The package becomes the single source of truth
-for future image, video, voice, lip-sync,
-music and SFX workers.
+Movie
+    ↓
+Movie Director
+    ↓
+Scene Director
+    ↓
+Character Identity
+    ↓
+Dialogue Identity
+    ↓
+Visual References
+    ↓
+Continuity
+    ↓
+QC
+    ↓
+Complete Scene Package
 """
 
 from typing import Dict, Any
@@ -61,8 +59,7 @@ class CompleteScenePackage:
         movie: MoviePlan,
         director: MovieDirector,
         scene_director: SceneDirector,
-        reference_engine: CharacterReferenceEngine,
-        dialogue_engine: DialogueEngine,
+        reference_engine: CharacterReferenceEngine = None,
     ):
 
         self.movie = movie
@@ -73,10 +70,14 @@ class CompleteScenePackage:
 
         self.reference_engine = (
             reference_engine
+            or CharacterReferenceEngine()
         )
 
+        # IMPORTANT:
+        # Use the SAME DialogueEngine that belongs
+        # to the SceneDirector.
         self.dialogue_engine = (
-            dialogue_engine
+            scene_director.dialogue_engine
         )
 
         self.qc = ProductionQualityControl(
@@ -84,20 +85,72 @@ class CompleteScenePackage:
             director,
         )
 
+        self._register_visual_identities()
+
         self.identity_package = (
             SceneIdentityPackage(
                 movie=movie,
                 scene_director=scene_director,
-                reference_engine=reference_engine,
+                reference_engine=(
+                    self.reference_engine
+                ),
             )
         )
 
         self.dialogue_package = (
             SceneDialoguePackage(
                 movie=movie,
-                dialogue_engine=dialogue_engine,
+                dialogue_engine=(
+                    self.dialogue_engine
+                ),
             )
         )
+
+    def _register_visual_identities(
+        self,
+    ):
+        """
+        Register every movie character in the
+        visual reference engine.
+
+        Actual reference assets can be added
+        later without changing this package.
+        """
+
+        for character in self.movie.characters:
+
+            if (
+                character.character_id
+                not in self.reference_engine.characters
+            ):
+
+                self.reference_engine.register_character(
+                    character_id=(
+                        character.character_id
+                    ),
+
+                    name=character.name,
+
+                    appearance=(
+                        character.appearance
+                    ),
+
+                    age=character.age,
+
+                    gender=character.gender,
+
+                    hair=character.hair,
+
+                    eyes=character.eyes,
+
+                    body_type=(
+                        character.body_type
+                    ),
+
+                    wardrobe_identity=(
+                        character.wardrobe
+                    ),
+                )
 
     def build(
         self,
@@ -360,16 +413,7 @@ class CompleteScenePackage:
     def _validate_dialogue_if_present(
         self,
         scene_id: str,
-    ) -> dict:
-        """
-        Dialogue is optional.
-
-        If a scene has no dialogue sequence,
-        the scene remains valid.
-
-        If dialogue exists, every turn must
-        pass speaker identity validation.
-        """
+    ):
 
         if scene_id not in (
             self.dialogue_engine.sequences
@@ -406,5 +450,9 @@ class CompleteScenePackage:
                 scene_id
             )
         )
+
+        if result["status"] != "READY":
+
+            return []
 
         return result["dialogue"]

@@ -1,13 +1,14 @@
 """
 VYDA AI MOVIE ENGINE
-Movie Brain — Build 001
+Movie Brain — Build 004
 
-Purpose:
-Turn a simple story idea into a structured movie production plan.
+Universal Creative Profile + Character Bible
 
-This is the foundation of the Movie Brain.
-No video generation, image generation, voice generation,
-or external AI provider is connected yet.
+VYDA is not tied to any country, culture, language,
+genre, visual style, or character type.
+
+The user creates the world.
+VYDA adapts to it.
 """
 
 from dataclasses import dataclass, field
@@ -15,39 +16,112 @@ from typing import List
 
 
 @dataclass
+class CreativeStyle:
+    """
+    Defines the creative world chosen by the filmmaker.
+    """
+
+    genre: str
+    tone: str = ""
+    visual_style: str = ""
+    cinematic_style: str = ""
+    language: str = ""
+    dialogue_style: str = ""
+    cultural_style: str = ""
+    era: str = ""
+    rating: str = ""
+
+
+@dataclass
 class Character:
+    """
+    Universal character bible.
+
+    Every character is created from user-defined information.
+    """
+
     character_id: str
     name: str
-    age: str
-    role: str
+    age: str = ""
+    gender: str = ""
+    background: str = ""
+    appearance: str = ""
+    hair: str = ""
+    eyes: str = ""
+    body_type: str = ""
+    wardrobe: str = ""
     personality: List[str] = field(default_factory=list)
+    voice: str = ""
+    accent: str = ""
+    relationships: List[str] = field(default_factory=list)
+    notes: str = ""
+
+
+@dataclass
+class Location:
+    """
+    Universal movie location.
+    """
+
+    location_id: str
+    name: str
+    description: str = ""
+    country_or_world: str = ""
+    era: str = ""
+    visual_style: str = ""
+    notes: str = ""
 
 
 @dataclass
 class Scene:
+    """
+    Scene production and continuity information.
+    """
+
     scene_id: str
-    location: str
-    time: str
-    characters: List[str]
-    action: str
+    location_id: str
+    time: str = ""
+    characters: List[str] = field(default_factory=list)
+
+    wardrobe_notes: str = ""
+    emotional_state: str = ""
+    action: str = ""
+
     dialogue: List[str] = field(default_factory=list)
+
+    camera: str = ""
+    lighting: str = ""
+    duration_seconds: int = 0
+
+    previous_scene_id: str = ""
+    next_scene_id: str = ""
+
+    continuity_notes: str = ""
 
 
 @dataclass
 class MoviePlan:
+    """
+    Complete production blueprint for a movie.
+    """
+
     title: str
     logline: str
-    genre: str
     theme: str
-    characters: List[Character]
-    scenes: List[Scene]
+
+    creative_style: CreativeStyle
+
+    characters: List[Character] = field(default_factory=list)
+    locations: List[Location] = field(default_factory=list)
+    scenes: List[Scene] = field(default_factory=list)
 
 
 class MovieBrain:
     """
     Core director/brain of VYDA AI Movie Engine.
 
-    Future versions will connect this brain to:
+    Future systems will connect this brain to:
+
     - AI screenplay generation
     - Character image generation
     - Video generation
@@ -55,6 +129,8 @@ class MovieBrain:
     - Lip-sync
     - Music
     - Sound effects
+    - Continuity engine
+    - Quality control
     - Movie assembly
     """
 
@@ -62,66 +138,19 @@ class MovieBrain:
         self,
         title: str,
         logline: str,
-        genre: str,
         theme: str,
+        creative_style: CreativeStyle,
         characters: List[Character],
+        locations: List[Location],
         scenes: List[Scene],
     ) -> MoviePlan:
 
         return MoviePlan(
             title=title,
             logline=logline,
-            genre=genre,
             theme=theme,
+            creative_style=creative_style,
             characters=characters,
+            locations=locations,
             scenes=scenes,
         )
-
-
-if __name__ == "__main__":
-
-    brain = MovieBrain()
-
-    movie = brain.create_movie_plan(
-        title="The Second Chance",
-        logline="A mother gets one opportunity to repair the relationship with her daughter.",
-        genre="Drama",
-        theme="Family and forgiveness",
-        characters=[
-            Character(
-                character_id="CHAR-001",
-                name="Ejiro",
-                age="35",
-                role="Mother",
-                personality=["strong", "loving", "protective"],
-            ),
-            Character(
-                character_id="CHAR-002",
-                name="Tega",
-                age="15",
-                role="Daughter",
-                personality=["quiet", "emotional", "intelligent"],
-            ),
-        ],
-        scenes=[
-            Scene(
-                scene_id="SCENE-001",
-                location="Family Living Room",
-                time="Evening",
-                characters=["CHAR-001", "CHAR-002"],
-                action="Ejiro notices that Tega is unusually quiet.",
-                dialogue=[
-                    "Ejiro: Tega, my daughter, are you okay?",
-                    "Tega: I'm fine, Mummy.",
-                ],
-            )
-        ],
-    )
-
-    print("VYDA AI MOVIE ENGINE")
-    print("--------------------")
-    print(f"Movie: {movie.title}")
-    print(f"Genre: {movie.genre}")
-    print(f"Theme: {movie.theme}")
-    print(f"Characters: {len(movie.characters)}")
-    print(f"Scenes: {len(movie.scenes)}")

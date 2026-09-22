@@ -1,51 +1,73 @@
 """
 VYDA AI MOVIE ENGINE
-Scene Director — Build 009
+Scene Director — Build 032
 
-Converts a movie scene and current continuity state
-into a structured production brief.
+Connects the Movie Director, scene information,
+character identities, dialogue identity, and
+continuity into one scene production brief.
 
-This is the foundation for future:
-- Image generation
-- Video generation
-- Voice generation
-- Lip-sync
-- Music
-- Sound effects
+The user creates the world.
+VYDA directs the scene.
 """
 
 from dataclasses import dataclass, field
 from typing import List
 
-from movie_brain import MoviePlan, Scene
 from movie_director import MovieDirector
+from dialogue_engine import (
+    DialogueEngine,
+)
+from identity_bridge import IdentityBridge
+
+
+@dataclass
+class SceneCharacter:
+    character_id: str
+    name: str
+
+    language: str = ""
+    accent: str = ""
+    voice: str = ""
+
+    appearance: str = ""
+    wardrobe: str = ""
+
+    emotional_state: str = ""
 
 
 @dataclass
 class SceneProductionBrief:
-    """
-    Complete production information for one scene.
-    """
 
     scene_id: str
 
     location_id: str
+    location_name: str
 
-    time: str
+    time: str = ""
 
-    characters: List[str] = field(default_factory=list)
+    characters: List[str] = field(
+        default_factory=list
+    )
+
+    character_identities: List[
+        SceneCharacter
+    ] = field(
+        default_factory=list
+    )
 
     action: str = ""
 
-    dialogue: List[str] = field(default_factory=list)
-
-    wardrobe_notes: str = ""
-
-    emotional_state: str = ""
+    dialogue: List[str] = field(
+        default_factory=list
+    )
 
     camera: str = ""
 
     lighting: str = ""
+
+    wardrobe_notes: str = ""
+
+    emotional_state: str = ""
 
     duration_seconds: int = 0
 
@@ -57,86 +79,269 @@ class SceneProductionBrief:
 
     dialogue_style: str = ""
 
-    continuity: dict = field(default_factory=dict)
+    continuity: dict = field(
+        default_factory=dict
+    )
 
 
 class SceneDirector:
-    """
-    Prepares individual scenes for production.
-    """
 
     def __init__(
         self,
-        movie: MoviePlan,
-        director: MovieDirector,
+        movie_director: MovieDirector,
     ):
 
-        self.movie = movie
-        self.director = director
+        self.movie_director = movie_director
+
+        self.dialogue_engine = (
+            DialogueEngine()
+        )
+
+        self.identity_bridge = (
+            IdentityBridge(
+                self.dialogue_engine
+            )
+        )
+
+        self._register_movie_characters()
+
+    def _register_movie_characters(
+        self,
+    ):
+
+        characters = (
+            self.movie_director.movie.characters
+        )
+
+        self.identity_bridge.register_characters(
+            characters
+        )
+
+    def _build_character_identities(
+        self,
+        scene,
+    ) -> List[SceneCharacter]:
+
+        identities = []
+
+        for character_id in scene.characters:
+
+            identity = (
+                self.identity_bridge.get_identity(
+                    character_id
+                )
+            )
+
+            if identity is None:
+                raise ValueError(
+                    "Scene references an unknown "
+                    f"character: {character_id}"
+                )
+
+            identities.append(
+                SceneCharacter(
+                    character_id=(
+                        identity.character_id
+                    ),
+
+                    name=identity.name,
+
+                    language=identity.language,
+
+                    accent=identity.accent,
+
+                    voice=identity.voice_profile,
+
+                    appearance=(
+                        identity.appearance
+                    ),
+
+                    wardrobe=(
+                        identity.wardrobe_identity
+                    ),
+
+                    emotional_state=(
+                        scene.emotional_state
+                    ),
+                )
+            )
+
+        return identities
 
     def prepare_scene(
         self,
         scene_id: str,
     ) -> SceneProductionBrief:
-        """
-        Prepare one scene using the movie's
-        creative profile and current continuity.
-        """
 
-        scene = self._find_scene(scene_id)
-
-        continuity_context = (
-            self.director.prepare_scene(scene_id)
+        context = (
+            self.movie_director.prepare_scene(
+                scene_id
+            )
         )
 
-        style = self.movie.creative_style
+        scene = context["scene"]
+
+        location = context["location"]
+
+        character_identities = (
+            self._build_character_identities(
+                scene
+            )
+        )
 
         return SceneProductionBrief(
+
             scene_id=scene.scene_id,
 
             location_id=scene.location_id,
+
+            location_name=location.name,
 
             time=scene.time,
 
             characters=scene.characters,
 
+            character_identities=(
+                character_identities
+            ),
+
             action=scene.action,
 
             dialogue=scene.dialogue,
-
-            wardrobe_notes=scene.wardrobe_notes,
-
-            emotional_state=scene.emotional_state,
 
             camera=scene.camera,
 
             lighting=scene.lighting,
 
-            duration_seconds=scene.duration_seconds,
+            wardrobe_notes=(
+                scene.wardrobe_notes
+            ),
 
-            visual_style=style.visual_style,
+            emotional_state=(
+                scene.emotional_state
+            ),
 
-            cinematic_style=style.cinematic_style,
+            duration_seconds=(
+                scene.duration_seconds
+            ),
 
-            language=style.language,
+            visual_style=(
+                context["creative_style"][
+                    "visual_style"
+                ]
+            ),
 
-            dialogue_style=style.dialogue_style,
+            cinematic_style=(
+                context["creative_style"][
+                    "cinematic_style"
+                ]
+            ),
 
-            continuity=continuity_context[
-                "continuity"
-            ],
+            language=(
+                context["creative_style"][
+                    "language"
+                ]
+            ),
+
+            dialogue_style=(
+                context["creative_style"][
+                    "dialogue_style"
+                ]
+            ),
+
+            continuity=(
+                context["continuity"]
+            ),
         )
 
-    def _find_scene(
+    def get_scene_brief(
         self,
         scene_id: str,
-    ) -> Scene:
+    ) -> dict:
 
-        for scene in self.movie.scenes:
+        brief = self.prepare_scene(
+            scene_id
+        )
 
-            if scene.scene_id == scene_id:
-                return scene
+        return {
+            "scene_id":
+                brief.scene_id,
 
-        raise ValueError(
-            f"Scene '{scene_id}' was not found."
-      )
+            "location": {
+                "location_id":
+                    brief.location_id,
+
+                "name":
+                    brief.location_name,
+
+                "time":
+                    brief.time,
+            },
+
+            "characters": [
+                {
+                    "character_id":
+                        character.character_id,
+
+                    "name":
+                        character.name,
+
+                    "language":
+                        character.language,
+
+                    "accent":
+                        character.accent,
+
+                    "voice":
+                        character.voice,
+
+                    "appearance":
+                        character.appearance,
+
+                    "wardrobe":
+                        character.wardrobe,
+
+                    "emotional_state":
+                        character.emotional_state,
+                }
+
+                for character
+                in brief.character_identities
+            ],
+
+            "action":
+                brief.action,
+
+            "dialogue":
+                brief.dialogue,
+
+            "camera":
+                brief.camera,
+
+            "lighting":
+                brief.lighting,
+
+            "wardrobe_notes":
+                brief.wardrobe_notes,
+
+            "emotional_state":
+                brief.emotional_state,
+
+            "duration_seconds":
+                brief.duration_seconds,
+
+            "visual_style":
+                brief.visual_style,
+
+            "cinematic_style":
+                brief.cinematic_style,
+
+            "language":
+                brief.language,
+
+            "dialogue_style":
+                brief.dialogue_style,
+
+            "continuity":
+                brief.continuity,
+        }

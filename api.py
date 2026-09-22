@@ -1,6 +1,6 @@
 """
 VYDA AI MOVIE ENGINE
-API — Build 027
+API — Build 029
 
 Universal filmmaking API.
 
@@ -16,8 +16,15 @@ Movie Brain
     ↓
 Movie Plan
 
-The user creates the world.
-VYDA adapts to it.
+Character identity now includes:
+
+Character
+    ↓
+Language
+    ↓
+Accent
+    ↓
+Voice
 """
 
 from typing import List
@@ -38,7 +45,7 @@ from story_pipeline import StoryPipeline
 app = FastAPI(
     title="VYDA AI Movie Engine",
     description="Universal AI filmmaking engine API.",
-    version="0.3.0",
+    version="0.4.0",
 )
 
 
@@ -63,17 +70,24 @@ class CharacterInput(BaseModel):
 
     age: str = ""
     gender: str = ""
+
     background: str = ""
+
     appearance: str = ""
     hair: str = ""
     eyes: str = ""
     body_type: str = ""
+
     wardrobe: str = ""
 
     personality: List[str] = Field(
         default_factory=list
     )
 
+    # Character-specific language
+    language: str = ""
+
+    # Character-specific voice identity
     voice: str = ""
     accent: str = ""
 
@@ -175,7 +189,7 @@ def home():
             "online",
 
         "version":
-            "0.3.0",
+            "0.4.0",
     }
 
 
@@ -244,19 +258,37 @@ def receive_story(
         characters.append(
             Character(
                 character_id=character_id,
+
                 name=character.name,
+
                 age=character.age,
+
                 gender=character.gender,
+
                 background=character.background,
+
                 appearance=character.appearance,
+
                 hair=character.hair,
+
                 eyes=character.eyes,
+
                 body_type=character.body_type,
+
                 wardrobe=character.wardrobe,
+
                 personality=character.personality,
+
+                # Character-specific language
+                language=character.language,
+
+                # Character-specific voice
                 voice=character.voice,
+
                 accent=character.accent,
+
                 relationships=character.relationships,
+
                 notes=character.notes,
             )
         )
@@ -275,15 +307,21 @@ def receive_story(
         locations.append(
             Location(
                 location_id=location_id,
+
                 name=location.name,
+
                 description=location.description,
+
                 country_or_world=(
                     location.country_or_world
                 ),
+
                 era=location.era,
+
                 visual_style=(
                     location.visual_style
                 ),
+
                 notes=location.notes,
             )
         )
@@ -295,28 +333,41 @@ def receive_story(
         scenes.append(
             Scene(
                 scene_id=scene.scene_id,
+
                 location_id=scene.location_id,
+
                 time=scene.time,
+
                 characters=scene.characters,
+
                 wardrobe_notes=(
                     scene.wardrobe_notes
                 ),
+
                 emotional_state=(
                     scene.emotional_state
                 ),
+
                 action=scene.action,
+
                 dialogue=scene.dialogue,
+
                 camera=scene.camera,
+
                 lighting=scene.lighting,
+
                 duration_seconds=(
                     scene.duration_seconds
                 ),
+
                 previous_scene_id=(
                     scene.previous_scene_id
                 ),
+
                 next_scene_id=(
                     scene.next_scene_id
                 ),
+
                 continuity_notes=(
                     scene.continuity_notes
                 ),
@@ -325,11 +376,17 @@ def receive_story(
 
     movie = pipeline.build_movie(
         title=request.title,
+
         story_idea=request.story_idea,
+
         theme=request.theme,
+
         creative_style=creative_style,
+
         characters=characters,
+
         locations=locations,
+
         scenes=scenes,
     )
 
@@ -354,6 +411,27 @@ def receive_story(
 
         "creative_profile":
             request.creative_profile.model_dump(),
+
+        "characters": [
+            {
+                "character_id":
+                    character.character_id,
+
+                "name":
+                    character.name,
+
+                "language":
+                    character.language,
+
+                "accent":
+                    character.accent,
+
+                "voice":
+                    character.voice,
+            }
+
+            for character in movie.characters
+        ],
 
         "character_count":
             len(movie.characters),

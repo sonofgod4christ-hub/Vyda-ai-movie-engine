@@ -1,29 +1,33 @@
 """
 VYDA AI MOVIE ENGINE
-Complete Scene Package — Build 021
+Complete Scene Package — Build 034
 
-Combines all scene-level production information
-into one authoritative package.
+The authoritative handoff package for one scene.
 
-Includes:
+This package combines:
 
 - Scene direction
-- Continuity
-- Character visual identities
-- Character references
-- Dialogue
-- Speaker identity
-- Voice information
+- Location
+- Characters
+- Character identity
+- Appearance
+- Wardrobe
 - Language
 - Accent
+- Voice
+- Dialogue
+- Speaker identity
 - Emotion
+- Continuity
+- Character references
 - Production QC
 
-The package is the handoff point for future
-image, video, voice, lip-sync, music and SFX workers.
+Nothing should be sent to a generation worker
+until this package is READY.
 
-The user creates the world.
-VYDA adapts to it.
+The package becomes the single source of truth
+for future image, video, voice, lip-sync,
+music and SFX workers.
 """
 
 from typing import Dict, Any
@@ -31,7 +35,6 @@ from typing import Dict, Any
 from movie_brain import MoviePlan
 from movie_director import MovieDirector
 from scene_director import SceneDirector
-
 from production_qc import ProductionQualityControl
 
 from character_reference_engine import (
@@ -63,7 +66,9 @@ class CompleteScenePackage:
     ):
 
         self.movie = movie
+
         self.director = director
+
         self.scene_director = scene_director
 
         self.reference_engine = (
@@ -200,6 +205,12 @@ class CompleteScenePackage:
             )
         )
 
+        character_data = (
+            self._build_character_data(
+                scene_brief
+            )
+        )
+
         return {
             "status":
                 "READY",
@@ -209,56 +220,61 @@ class CompleteScenePackage:
 
             "package": {
 
-                "scene":
-                    {
-                        "scene_id":
-                            scene_brief.scene_id,
+                "scene": {
+                    "scene_id":
+                        scene_brief.scene_id,
 
-                        "location_id":
-                            scene_brief.location_id,
+                    "location_id":
+                        scene_brief.location_id,
 
-                        "time":
-                            scene_brief.time,
+                    "location_name":
+                        scene_brief.location_name,
 
-                        "characters":
-                            scene_brief.characters,
+                    "time":
+                        scene_brief.time,
 
-                        "action":
-                            scene_brief.action,
+                    "characters":
+                        scene_brief.characters,
 
-                        "dialogue":
-                            scene_brief.dialogue,
+                    "action":
+                        scene_brief.action,
 
-                        "wardrobe_notes":
-                            scene_brief.wardrobe_notes,
+                    "dialogue":
+                        scene_brief.dialogue,
 
-                        "emotional_state":
-                            scene_brief.emotional_state,
+                    "wardrobe_notes":
+                        scene_brief.wardrobe_notes,
 
-                        "camera":
-                            scene_brief.camera,
+                    "emotional_state":
+                        scene_brief.emotional_state,
 
-                        "lighting":
-                            scene_brief.lighting,
+                    "camera":
+                        scene_brief.camera,
 
-                        "duration_seconds":
-                            scene_brief.duration_seconds,
+                    "lighting":
+                        scene_brief.lighting,
 
-                        "visual_style":
-                            scene_brief.visual_style,
+                    "duration_seconds":
+                        scene_brief.duration_seconds,
 
-                        "cinematic_style":
-                            scene_brief.cinematic_style,
+                    "visual_style":
+                        scene_brief.visual_style,
 
-                        "language":
-                            scene_brief.language,
+                    "cinematic_style":
+                        scene_brief.cinematic_style,
 
-                        "dialogue_style":
-                            scene_brief.dialogue_style,
+                    "language":
+                        scene_brief.language,
 
-                        "continuity":
-                            scene_brief.continuity,
-                    },
+                    "dialogue_style":
+                        scene_brief.dialogue_style,
+
+                    "continuity":
+                        scene_brief.continuity,
+                },
+
+                "characters":
+                    character_data,
 
                 "character_identities":
                     identity_data,
@@ -292,17 +308,67 @@ class CompleteScenePackage:
 
             "ready_for_generation":
                 result["status"] == "READY",
+
+            "reason":
+                result.get(
+                    "reason",
+                    "",
+                ),
         }
+
+    def _build_character_data(
+        self,
+        scene_brief,
+    ) -> list:
+
+        characters = []
+
+        for character in (
+            scene_brief.character_identities
+        ):
+
+            characters.append(
+                {
+                    "character_id":
+                        character.character_id,
+
+                    "name":
+                        character.name,
+
+                    "language":
+                        character.language,
+
+                    "accent":
+                        character.accent,
+
+                    "voice":
+                        character.voice,
+
+                    "appearance":
+                        character.appearance,
+
+                    "wardrobe":
+                        character.wardrobe,
+
+                    "emotional_state":
+                        character.emotional_state,
+                }
+            )
+
+        return characters
 
     def _validate_dialogue_if_present(
         self,
         scene_id: str,
     ) -> dict:
         """
-        Dialogue is optional for scenes.
+        Dialogue is optional.
 
-        If no dialogue sequence exists,
+        If a scene has no dialogue sequence,
         the scene remains valid.
+
+        If dialogue exists, every turn must
+        pass speaker identity validation.
         """
 
         if scene_id not in (
@@ -335,8 +401,10 @@ class CompleteScenePackage:
 
             return []
 
-        result = self.dialogue_package.build(
-            scene_id
+        result = (
+            self.dialogue_package.build(
+                scene_id
+            )
         )
 
         return result["dialogue"]

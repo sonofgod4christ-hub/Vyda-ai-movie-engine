@@ -1,26 +1,24 @@
 """
 VYDA AI MOVIE ENGINE
-Production Controller — Build 015
+Production Controller — Build 033
 
 Coordinates scene preparation before generation.
 
 Production flow:
 
 Movie Director
-      ↓
+    ↓
 Scene Director
-      ↓
+    ↓
 Production QC
-      ↓
+    ↓
 Production Package
-      ↓
+    ↓
 Future Generation Workers
 
 The controller does not generate media yet.
-It prepares and validates the scene first.
 
-The user creates the world.
-VYDA adapts to it.
+It prepares and validates the scene first.
 """
 
 from dataclasses import asdict
@@ -38,14 +36,16 @@ class ProductionController:
         self,
         movie: MoviePlan,
     ):
+
         self.movie = movie
 
         self.director = MovieDirector(
             movie
         )
 
+        # Build 032 SceneDirector receives
+        # the MovieDirector instance.
         self.scene_director = SceneDirector(
-            movie,
             self.director
         )
 
@@ -61,8 +61,8 @@ class ProductionController:
         """
         Prepare a scene for future generation.
 
-        QC must pass before a production package
-        can be created.
+        QC must pass before a scene can
+        move toward generation.
         """
 
         qc_report = self.qc.get_qc_report(
@@ -70,23 +70,40 @@ class ProductionController:
         )
 
         if qc_report["status"] != "PASS":
+
             return {
-                "status": "BLOCKED",
-                "scene_id": scene_id,
-                "qc": qc_report,
-                "production_package": None,
+                "status":
+                    "BLOCKED",
+
+                "scene_id":
+                    scene_id,
+
+                "qc":
+                    qc_report,
+
+                "production_package":
+                    None,
             }
 
-        brief = self.scene_director.prepare_scene(
-            scene_id
+        brief = (
+            self.scene_director.prepare_scene(
+                scene_id
+            )
         )
 
         return {
-            "status": "READY",
-            "scene_id": scene_id,
-            "qc": qc_report,
+            "status":
+                "READY",
+
+            "scene_id":
+                scene_id,
+
+            "qc":
+                qc_report,
+
             "production_package": {
-                "scene": asdict(brief),
+                "scene":
+                    asdict(brief),
             },
         }
 
@@ -115,13 +132,59 @@ class ProductionController:
         if not self.can_generate(
             scene_id
         ):
+
             raise ValueError(
                 f"Scene '{scene_id}' "
                 "failed production QC."
             )
 
-        brief = self.scene_director.prepare_scene(
+        brief = (
+            self.scene_director.prepare_scene(
+                scene_id
+            )
+        )
+
+        return asdict(
+            brief
+        )
+
+    def get_scene_status(
+        self,
+        scene_id: str,
+    ) -> dict:
+        """
+        Return a simple production status
+        for the requested scene.
+        """
+
+        qc_report = self.qc.get_qc_report(
             scene_id
         )
 
-        return asdict(brief)
+        if qc_report["status"] != "PASS":
+
+            return {
+                "status":
+                    "BLOCKED",
+
+                "scene_id":
+                    scene_id,
+
+                "reason":
+                    "Production QC failed.",
+
+                "qc":
+                    qc_report,
+            }
+
+        return {
+            "status":
+                "READY",
+
+            "scene_id":
+                scene_id,
+
+            "reason":
+                "Scene passed production QC "
+                "and is ready for generation.",
+        }

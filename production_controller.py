@@ -43,8 +43,8 @@ class ProductionController:
             movie
         )
 
-        # Build 032 SceneDirector receives
-        # the MovieDirector instance.
+        # Build 032 SceneDirector now
+        # receives the MovieDirector only.
         self.scene_director = SceneDirector(
             self.director
         )
@@ -61,8 +61,8 @@ class ProductionController:
         """
         Prepare a scene for future generation.
 
-        QC must pass before a scene can
-        move toward generation.
+        QC must pass before a production
+        package can be created.
         """
 
         qc_report = self.qc.get_qc_report(
@@ -153,8 +153,8 @@ class ProductionController:
         scene_id: str,
     ) -> dict:
         """
-        Return a simple production status
-        for the requested scene.
+        Return the current production
+        readiness of a scene.
         """
 
         qc_report = self.qc.get_qc_report(
